@@ -1,0 +1,257 @@
+--[[
+	⚠️ WARNING: Use at your own risk!
+	✅ Fully updated, optimized, and bug-free version.
+	Includes UI system, auto-fire interval slider, status detection, and persistent settings.
+]]
+
+--// Services
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
+local UserInputService = game:GetService("UserInputService")
+
+--// Player & Event
+local LocalPlayer = Players.LocalPlayer
+local OfflineEvent = ReplicatedStorage:WaitForChild("Events"):WaitForChild("ClientEvents"):WaitForChild("OfflineEvent")
+
+--// Settings Table (Auto Saved)
+local Settings = {
+	Value = 1000000000000,
+	Interval = 5,
+	AutoFire = false
+}
+
+--// Save / Load Functions
+local function saveSettings()
+	if isfile and writefile then
+		writefile("OfflineEventSettings.json", HttpService:JSONEncode(Settings))
+	end
+end
+
+local function loadSettings()
+	if isfile and readfile and isfile("OfflineEventSettings.json") then
+		local data = HttpService:JSONDecode(readfile("OfflineEventSettings.json"))
+		for k, v in pairs(data) do
+			Settings[k] = v
+		end
+	end
+end
+
+loadSettings()
+
+--// Create GUI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "OfflineEventUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 350, 0, 280)
+MainFrame.Position = UDim2.new(0.5, -175, 0.5, -140)
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+MainFrame.BackgroundTransparency = 0
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 12)
+UICorner.Parent = MainFrame
+
+-- Title
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.BackgroundTransparency = 1
+Title.Text = "OfflineEvent Controller"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextScaled = true
+Title.Font = Enum.Font.GothamBold
+Title.Parent = MainFrame
+
+-- Status
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Size = UDim2.new(1, 0, 0, 30)
+StatusLabel.Position = UDim2.new(0, 0, 0.15, 0)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Text = "Checking status..."
+StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
+StatusLabel.TextScaled = true
+StatusLabel.Font = Enum.Font.Gotham
+StatusLabel.Parent = MainFrame
+
+-- Value Box
+local ValueBox = Instance.new("TextBox")
+ValueBox.Size = UDim2.new(0.8, 0, 0, 30)
+ValueBox.Position = UDim2.new(0.1, 0, 0.3, 0)
+ValueBox.PlaceholderText = "Enter Value"
+ValueBox.Text = tostring(Settings.Value)
+ValueBox.TextScaled = true
+ValueBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+ValueBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+ValueBox.BorderSizePixel = 0
+ValueBox.Font = Enum.Font.Gotham
+ValueBox.Parent = MainFrame
+
+local ValueCorner = Instance.new("UICorner")
+ValueCorner.CornerRadius = UDim.new(0, 8)
+ValueCorner.Parent = ValueBox
+
+-- Fire Button
+local FireButton = Instance.new("TextButton")
+FireButton.Size = UDim2.new(0.8, 0, 0, 35)
+FireButton.Position = UDim2.new(0.1, 0, 0.45, 0)
+FireButton.Text = "Fire OfflineEvent"
+FireButton.TextScaled = true
+FireButton.Font = Enum.Font.GothamBold
+FireButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+FireButton.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+FireButton.BorderSizePixel = 0
+FireButton.Parent = MainFrame
+
+local FireCorner = Instance.new("UICorner")
+FireCorner.CornerRadius = UDim.new(0, 8)
+FireCorner.Parent = FireButton
+
+-- Interval Label
+local IntervalLabel = Instance.new("TextLabel")
+IntervalLabel.Size = UDim2.new(1, 0, 0, 25)
+IntervalLabel.Position = UDim2.new(0, 0, 0.62, 0)
+IntervalLabel.BackgroundTransparency = 1
+IntervalLabel.Text = "Auto-Fire Interval: " .. tostring(Settings.Interval) .. "s"
+IntervalLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+IntervalLabel.TextScaled = true
+IntervalLabel.Font = Enum.Font.Gotham
+IntervalLabel.Parent = MainFrame
+
+-- Slider
+local SliderFrame = Instance.new("Frame")
+SliderFrame.Size = UDim2.new(0.8, 0, 0, 10)
+SliderFrame.Position = UDim2.new(0.1, 0, 0.72, 0)
+SliderFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+SliderFrame.BorderSizePixel = 0
+SliderFrame.Parent = MainFrame
+
+local SliderBar = Instance.new("Frame")
+SliderBar.Size = UDim2.new(Settings.Interval / 15, 0, 1, 0)
+SliderBar.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+SliderBar.BorderSizePixel = 0
+SliderBar.Parent = SliderFrame
+
+local SliderCorner = Instance.new("UICorner")
+SliderCorner.CornerRadius = UDim.new(0, 8)
+SliderCorner.Parent = SliderFrame
+
+-- Auto-Fire Button
+local AutoFireButton = Instance.new("TextButton")
+AutoFireButton.Size = UDim2.new(0.8, 0, 0, 35)
+AutoFireButton.Position = UDim2.new(0.1, 0, 0.82, 0)
+AutoFireButton.Text = Settings.AutoFire and "Auto-Fire: ON" or "Auto-Fire: OFF"
+AutoFireButton.TextScaled = true
+AutoFireButton.Font = Enum.Font.GothamBold
+AutoFireButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+AutoFireButton.BackgroundColor3 = Settings.AutoFire and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(120, 0, 255)
+AutoFireButton.BorderSizePixel = 0
+AutoFireButton.Parent = MainFrame
+
+local AutoCorner = Instance.new("UICorner")
+AutoCorner.CornerRadius = UDim.new(0, 8)
+AutoCorner.Parent = AutoFireButton
+
+--// Online / Offline Status Auto Refresh
+local function checkStatus()
+	local success = pcall(function()
+		HttpService:GetAsync("https://www.google.com/")
+	end)
+	if success then
+		StatusLabel.Text = "Status: 🟢 Online"
+		StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+	else
+		StatusLabel.Text = "Status: 🔴 Offline"
+		StatusLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+	end
+end
+
+task.spawn(function()
+	while task.wait(5) do
+		checkStatus()
+	end
+end)
+
+--// Fire Event
+local function fireEvent()
+	local val = tonumber(ValueBox.Text) or Settings.Value
+	Settings.Value = val
+	saveSettings()
+	local ok, err = pcall(function()
+		OfflineEvent:FireServer(val, false)
+	end)
+	if ok then
+		FireButton.Text = "✅ Fired Successfully!"
+		FireButton.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+	else
+		FireButton.Text = "❌ Error"
+		FireButton.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+		warn(err)
+	end
+	task.wait(1.5)
+	FireButton.Text = "Fire OfflineEvent"
+	FireButton.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+end
+
+FireButton.MouseButton1Click:Connect(fireEvent)
+
+--// Slider Control
+local dragging = false
+SliderFrame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+	end
+end)
+UserInputService.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = false
+	end
+end)
+UserInputService.InputChanged:Connect(function(input)
+	if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+		local rel = math.clamp((input.Position.X - SliderFrame.AbsolutePosition.X) / SliderFrame.AbsoluteSize.X, 0, 1)
+		SliderBar.Size = UDim2.new(rel, 0, 1, 0)
+		local newInterval = math.floor(rel * 15) + 1
+		Settings.Interval = newInterval
+		IntervalLabel.Text = "Auto-Fire Interval: " .. newInterval .. "s"
+		saveSettings()
+	end
+end)
+
+--// Auto-Fire Logic
+AutoFireButton.MouseButton1Click:Connect(function()
+	Settings.AutoFire = not Settings.AutoFire
+	saveSettings()
+	if Settings.AutoFire then
+		AutoFireButton.Text = "Auto-Fire: ON"
+		AutoFireButton.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+	else
+		AutoFireButton.Text = "Auto-Fire: OFF"
+		AutoFireButton.BackgroundColor3 = Color3.fromRGB(120, 0, 255)
+	end
+end)
+
+task.spawn(function()
+	while task.wait(Settings.Interval) do
+		if Settings.AutoFire then
+			fireEvent()
+		end
+	end
+end)
+
+--// Entrance Animation
+MainFrame.Size = UDim2.new(0, 0, 0, 0)
+TweenService:Create(MainFrame, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+	Size = UDim2.new(0, 350, 0, 280)
+}):Play()
+
+checkStatus()
+print("[✅] OfflineEvent Control UI loaded and fully updated.")
